@@ -1,0 +1,209 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<script>
+			function prefix(m){return m==0?"":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
+			function magnitude(w){return parseInt(Math.floor(Math.log10(parseFloat(w))/3))}
+
+			let API   = new Intl.DateTimeFormat("en-ca", {year: "numeric", month: "numeric"});
+			let DOC   = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
+			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
+			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
+
+			let table;
+
+			function save()
+			{
+				let output = "{\n";
+				
+				output += "\t\"genesis\": {";
+				output += "\"time\": " + table["genesis"].time.getTime()/1000 + ", ";
+				output += "\"work\": \"" + table["genesis"].work.toString() + "\"},";
+								
+				for(let year in table)
+				{
+					if(year == "genesis") continue;
+					
+					output += "\n\t\"" + year + "\":\n\t{";
+					
+					for(let month in table[year])
+					{
+						if(year == YEAR.format(new Date()) && month == MONTH.format(new Date())) break;
+						
+						output += "\n\t\t" + ("\"" + month + "\":").padEnd(12, " ") + " {";
+						output += "\"time\": " + table[year][month].time.getTime()/1000 + ", ";
+						output += "\"work\": \"" + table[year][month].work.toString() + "\"},";
+					}
+					
+					output = output.slice(0, -1) + "\n\t},";
+				};
+				
+				output = output.slice(0, -1) + "\n}";
+				
+				let link = document.createElement("a");
+				
+				link.href = URL.createObjectURL(new Blob([output], {type: "application/json"}));
+				link.download = "hashrate.json";
+				link.target = "_blank";
+				
+				link.click();
+				URL.revokeObjectURL(link.href);
+				link.remove();
+			}
+			
+			function print(scroll = false)
+			{
+				document.body.innerHTML = "<div id='table'>Bitcoin Mining Network Monthly Hashrate Table</div>";
+				
+				let date = table["genesis"].time;
+				let work = table["genesis"].work;
+				
+				for(let year in table)
+				{
+					if(year == "genesis") continue;
+					
+					let output = [];
+					
+					output.push("<div>");
+					output.push("   Date       Hashrate      Work      Chainwork");
+					output.push("-----------------------------------------------");
+					
+					for(let month in table[year])
+					{
+						let totalwork = table[year][month].work;
+						let chainwork = (work += totalwork);
+						let hashrate  = totalwork/BigInt(Math.round((table[year][month].time - date)/1000+1));
+						
+						date = table[year][month].time;
+						
+						chainwork = (parseFloat(chainwork)/1000**magnitude(chainwork)).toFixed(3) + " " + prefix(magnitude(chainwork)) + "H";
+						totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
+						hashrate  = (parseFloat(hashrate)/1000**magnitude(hashrate)).toFixed(2) + " " + prefix(magnitude(hashrate)) + "H/s";
+						
+						output.push("[" + DOC.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
+					}
+					
+					output.push("</div>");
+					
+					document.body.innerHTML += output.join("<br>").replaceAll(" ", "&nbsp;");
+				}
+				
+				if(scroll)
+					window.scrollBy({top: parseInt(sessionStorage.position) + window.innerHeight, behavior: "smooth"});
+				else
+					window.scrollTo({top: sessionStorage.position?sessionStorage.position:document.body.scrollHeight, behavior: sessionStorage.position?"instant":"smooth"});
+			}
+			
+			function sync(time, work)
+			{				
+				fetch("https://api.blockchair.com/bitcoin/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
+				then(response=>response.ok?response.json().then(block =>
+				{				
+					if(table[YEAR.format(time)]==undefined) table[YEAR.format(time)] = {};
+					table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time), work: BigInt("0x" + block.data[0].chainwork) - work};
+					
+					print(window.innerHeight + parseInt(window.scrollY) + 5 >= document.body.offsetHeight);
+					
+					work = BigInt("0x" + block.data[0].chainwork);
+					time.setDate(1); time.setMonth(time.getMonth()+1);
+					
+					if(12*time.getFullYear()+time.getMonth() > 12*new Date().getFullYear()+new Date().getMonth()) return;
+					
+					setTimeout(sync,  1000, time, work);
+				}):setTimeout(sync, 10000, time, work))
+			}
+			
+			function download()
+			{
+				fetch("https://api.blockchair.com/bitcoin/blocks?q=id(0..1)&s=id(asc)").
+				then(response=>response.ok?response.json().then(block =>
+				{
+					table = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+					
+					sync(new Date(table["genesis"].time), table["genesis"].work);
+					
+				}):setTimeout(download, 10000))
+			}
+
+			window.onload = function()
+			{
+				fetch("hashrate.json").
+				then(response=>response.ok?response.text().then(content =>
+				{
+					table = JSON.parse(content, (key, value) =>
+					{
+						switch(key)
+						{
+							case "time": return new Date(value*1000);
+							case "work": return BigInt(value);
+							default: return value;
+						}
+					});
+					
+					let time, work = table["genesis"].work;
+
+					for(year in table)
+					{
+						if(year == "genesis") continue;
+						
+						for(month in table[year])
+						{
+							if(12*table[year][month].time.getFullYear()+table[year][month].time.getMonth() >= 12*new Date().getFullYear()+new Date().getMonth())
+							{
+								delete table[year][month];
+								continue;
+							}
+						
+							time = table[year][month].time;
+							work += table[year][month].work;
+						}
+					}
+					
+					time = new Date(time);
+					time.setDate(1);
+					time.setMonth(time.getMonth()+1);
+					
+					print(); sync(time, work);
+					
+				}):download());
+			}
+			
+			window.onscroll = function()
+			{
+				if(sessionStorage.position) sessionStorage.position = window.scrollY;
+			}
+			
+			window.onscrollend = function()
+			{
+				if(window.scrollY) sessionStorage.position = window.scrollY;
+			}
+		</script>
+		<style>
+			body
+			{
+				display: flex;
+				flex-direction: row;
+				flex-wrap: wrap;
+				align-content: center;
+				justify-content: space-evenly;
+				margin: 0;
+			}
+			
+			div
+			{
+				font-family: monospace;
+				margin: 10px;
+			}
+			
+			#table
+			{
+				width: 100%;
+				text-align: center;
+				font-size: 26;
+				padding-top: 40px;
+			}
+		</style>
+	</head>
+	<body>
+	</body>
+</html>
