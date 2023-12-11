@@ -7,7 +7,7 @@
 			function prefix(m){return m==0?"":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
 			function magnitude(w){return parseInt(Math.floor(Math.log10(parseFloat(w))/3))}
 
-			let API   = new Intl.DateTimeFormat("en-ca", {year: "numeric", month: "numeric"});
+			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric"});
 			let DOC   = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
 			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
 			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
