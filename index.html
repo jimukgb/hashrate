@@ -196,7 +196,7 @@
 						time.setDate(1);
 						time.setMonth(time.getMonth()+1);
 						
-						print();
+						document.getElementById("page").hidden = false; print();
 						
 						if(timer) clearTimeout(timer); sync(time, work, chain); 
 						
@@ -281,7 +281,7 @@
 		</style>
 	</head>
 	<body>
-		<div id="page">
+		<div id="page" hidden>
 			<div id="heading">
 				<span id="fork"></span> Mining Network Monthly Hashrate Table
 			</div>
