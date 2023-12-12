@@ -4,18 +4,28 @@
 		<link rel="icon" type="image/x-icon" href="bitcoin.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 		<script>
-			function prefix(m){return m==0?"":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
-			function magnitude(w){return parseInt(Math.floor(Math.log10(parseFloat(w))/3))}
-
+			let HOST  = "https://api.blockchair.com/";
+			
 			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric"});
-			let DOC   = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
+			let PRINT = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
 			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
 			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
 
-			let table;
+			let table, timer;
+			
+			function prefix(m){return m==0?"":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
+			function magnitude(w){return parseInt(Math.floor(Math.log10(parseFloat(w))/3))}
 
 			function save()
 			{
+				if(document.getElementById("chain").disabled)
+				{
+					alert("Downloading hashrate data from API provider currently in progress...");
+					
+					return;
+				}
+				
+				let chain = document.getElementById("chain").value;
 				let output = "{\n";
 				
 				output += "\t\"genesis\": {";
@@ -45,7 +55,7 @@
 				let link = document.createElement("a");
 				
 				link.href = URL.createObjectURL(new Blob([output], {type: "application/json"}));
-				link.download = "hashrate.json";
+				link.download = chain + ".json";
 				link.target = "_blank";
 				
 				link.click();
@@ -55,10 +65,10 @@
 			
 			function print(scroll = false)
 			{
-				document.body.innerHTML = "<div id='table'>Bitcoin Mining Network Monthly Hashrate Table</div>";
-				
 				let date = table["genesis"].time;
 				let work = table["genesis"].work;
+				
+				document.getElementById("table").innerHTML = "";
 				
 				for(let year in table)
 				{
@@ -82,12 +92,12 @@
 						totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
 						hashrate  = (parseFloat(hashrate)/1000**magnitude(hashrate)).toFixed(2) + " " + prefix(magnitude(hashrate)) + "H/s";
 						
-						output.push("[" + DOC.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
+						output.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
 					}
 					
 					output.push("</div>");
 					
-					document.body.innerHTML += output.join("<br>").replaceAll(" ", "&nbsp;");
+					document.getElementById("table").innerHTML += output.join("<br>").replaceAll(" ", "&nbsp;");
 				}
 				
 				if(scroll)
@@ -96,84 +106,107 @@
 					window.scrollTo({top: sessionStorage.position?sessionStorage.position:document.body.scrollHeight, behavior: sessionStorage.position?"instant":"smooth"});
 			}
 			
-			function sync(time, work)
-			{				
-				fetch("https://api.blockchair.com/bitcoin/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
+			function sync(time, work, chain)
+			{
+				fetch(HOST+chain+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
 				then(response=>response.ok?response.json().then(block =>
 				{				
 					if(table[YEAR.format(time)]==undefined) table[YEAR.format(time)] = {};
 					table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time), work: BigInt("0x" + block.data[0].chainwork) - work};
 					
-					print(window.innerHeight + parseInt(window.scrollY) + 5 >= document.body.offsetHeight);
+					print(window.innerHeight + parseInt(window.scrollY) + 3*parseInt(window.getComputedStyle(document.body).fontSize) >= document.getElementById("page").offsetHeight);
 					
 					time.setDate(1); time.setMonth(time.getMonth()+1);
 					
 					if(12*time.getFullYear()+time.getMonth() > 12*new Date().getFullYear()+new Date().getMonth())
 					{
+						document.getElementById("chain").disabled = false;
+						
 						time.setMonth(time.getMonth()-1);
-						setTimeout(sync, 150000, time, work);
+						timer = setTimeout(sync, 150000, time, work, chain);
 						return;
 					}
 					
 					work = BigInt("0x" + block.data[0].chainwork);
 					
-					setTimeout(sync,  1000, time, work);
-				}):setTimeout(sync, 10000, time, work))
+					timer = setTimeout(sync,  1000, time, work, chain);
+				}):timer = setTimeout(sync, 10000, time, work, chain))
 			}
 			
-			function download()
+			function download(chain)
 			{
-				fetch("https://api.blockchair.com/bitcoin/blocks?q=id(0..1)&s=id(asc)").
+				document.getElementById("chain").disabled = true;
+				
+				fetch(HOST+chain+"/blocks?q=id(0..1)&s=id(asc)").
 				then(response=>response.ok?response.json().then(block =>
 				{
 					table = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
 					
 					sync(new Date(table["genesis"].time), table["genesis"].work);
 					
-				}):setTimeout(download, 10000))
+				}):timer = setTimeout(download, 10000, chain))
 			}
 
 			window.onload = function()
 			{
-				fetch("hashrate.json").
-				then(response=>response.ok?response.text().then(content =>
+				(document.getElementById("chain").onchange = function()
 				{
-					table = JSON.parse(content, (key, value) =>
+					let chain = document.getElementById("chain").value;
+					
+					document.getElementById("chain").childNodes.forEach(option =>
 					{
-						switch(key)
-						{
-							case "time": return new Date(value*1000);
-							case "work": return BigInt(value);
-							default: return value;
-						}
+						if(option.value == document.getElementById("chain").value) document.getElementById("fork").innerText = option.getAttribute("name");
 					});
 					
-					let time, work = table["genesis"].work;
-
-					for(year in table)
+					document.getElementById("chain").disabled = true;
+				
+					fetch(chain+".json").
+					then(response=>response.ok?response.text().then(content =>
 					{
-						if(year == "genesis") continue;
-						
-						for(month in table[year])
+						table = JSON.parse(content, (key, value) =>
 						{
-							if(12*table[year][month].time.getFullYear()+table[year][month].time.getMonth() >= 12*new Date().getFullYear()+new Date().getMonth())
+							switch(key)
 							{
-								delete table[year][month];
-								continue;
+								case "time": return new Date(value*1000);
+								case "work": return BigInt(value);
+								default: return value;
 							}
+						});
 						
-							time = table[year][month].time;
-							work += table[year][month].work;
+						let time, work = table["genesis"].work;
+
+						for(year in table)
+						{
+							if(year == "genesis") continue;
+							
+							for(month in table[year])
+							{
+								if(12*table[year][month].time.getFullYear()+table[year][month].time.getMonth() >= 12*new Date().getFullYear()+new Date().getMonth())
+								{
+									delete table[year][month];
+									continue;
+								}
+							
+								time = table[year][month].time;
+								work += table[year][month].work;
+							}
 						}
-					}
-					
-					time = new Date(time);
-					time.setDate(1);
-					time.setMonth(time.getMonth()+1);
-					
-					print(); sync(time, work);
-					
-				}):download());
+						
+						time = new Date(time);
+						time.setDate(1);
+						time.setMonth(time.getMonth()+1);
+						
+						print();
+						
+						if(timer) clearTimeout(timer); sync(time, work, chain); 
+						
+					}):download(chain));
+				})()
+				
+				document.getElementById("page").onmousedown = window.onkeypress = function()
+				{
+					document.getElementById("selector").classList.toggle("fade");
+				}
 			}
 			
 			window.onscroll = function()
@@ -189,29 +222,80 @@
 		<style>
 			body
 			{
+				font-family: monospace;
+				height: 100%;
+				margin: 0;
+			}
+			
+			#selector
+			{
+				opacity: 1;
+				transition: opacity 1s;
+				position: fixed;
+				top: 10px;
+				right: 10px;
+			}
+			
+			#selector.fade
+			{
+				opacity: 0;
+				pointer-events: none;
+			}
+			
+			#chain
+			{
+				font-family: monospace;
+				font-size: 34;
+				width: auto;
+			}
+			
+			#page
+			{
+				top: 50%;
+				position: absolute;
+				transform: translateY(max(-50vh, -50%));
+			}
+			
+			#heading
+			{
+				width: 100%;
+				text-align: center;
+				font-size: 26;
+				padding-top: 55px;
+				padding-bottom: 10px;
+			}
+			
+			#table
+			{
 				display: flex;
 				flex-direction: row;
 				flex-wrap: wrap;
 				align-content: center;
 				justify-content: space-evenly;
-				margin: 0;
 			}
 			
-			div
+			#table > div
 			{
-				font-family: monospace;
 				margin: 10px;
-			}
-			
-			#table
-			{
-				width: 100%;
-				text-align: center;
-				font-size: 26;
-				padding-top: 40px;
 			}
 		</style>
 	</head>
 	<body>
+		<div id="page">
+			<div id="heading">
+				<span id="fork"></span> Mining Network Monthly Hashrate Table
+			</div>
+			<div id="table"></div>
+		</div>
+		<div id="selector">
+			<select id="chain" disabled>
+				<option value="bitcoin" name="Bitcoin">BTC</option>
+				<option value="bitcoin-cash" name="Bitcoin Cash">BCH</option>
+				<option value="bitcoin-sv" name="Bitcoin SV" disabled>BSV</option>
+				<option value="ecash" name="eCash">XEC</option>
+				<option value="litecoin-cash" name="Litecoin Cash" hidden>LCC</option>
+				<option value="*" name="SHA256D" hidden>ALL</option>
+			</select>
+		</div>
 	</body>
 </html>
