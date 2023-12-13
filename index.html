@@ -13,8 +13,8 @@
 
 			let table, timer;
 			
-			function prefix(m){return m==0?"":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
-			function magnitude(w){return parseInt(Math.floor(Math.log10(parseFloat(w))/3))}
+			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
+			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
 
 			function save()
 			{
@@ -36,18 +36,24 @@
 				{
 					if(year == "genesis") continue;
 					
-					output += "\n\t\"" + year + "\":\n\t{";
+					let annum = "";
 					
 					for(let month in table[year])
 					{
 						if(year == YEAR.format(new Date()) && month == MONTH.format(new Date())) break;
+						if(table[year][month].work == -1n) continue;
 						
-						output += "\n\t\t" + ("\"" + month + "\":").padEnd(12, " ") + " {";
-						output += "\"time\": " + table[year][month].time.getTime()/1000 + ", ";
-						output += "\"work\": \"" + table[year][month].work.toString() + "\"},";
+						annum += "\n\t\t" + ("\"" + month + "\":").padEnd(12, " ") + " {";
+						annum += "\"time\": " + table[year][month].time.getTime()/1000 + ", ";
+						annum += "\"work\": \"" + table[year][month].work.toString() + "\"},";
 					}
 					
-					output = output.slice(0, -1) + "\n\t},";
+					if(annum.length)
+					{
+						output += "\n\t\"" + year + "\":\n\t{";
+						output += annum;
+						output = output.slice(0, -1) + "\n\t},";
+					}
 				};
 				
 				output = output.slice(0, -1) + "\n}";
@@ -68,7 +74,14 @@
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
-				let date = table["genesis"]?table["genesis"].time:"", work = 0n;
+				let date = table["genesis"].time, period = new Date("2009-01-10"), work = 0n;
+						
+				while(period<date)
+				{
+					if(table[YEAR.format(period)]==undefined) table[YEAR.format(period)] = {};
+					table[YEAR.format(period)][MONTH.format(period)] = {time: new Date(period), work: -1n};
+					period.setMonth(period.getMonth()+1);
+				}
 				
 				for(let year in table)
 				{
@@ -80,13 +93,13 @@
 					output.push("   Date       Hashrate      Work      Chainwork");
 					output.push("-----------------------------------------------");
 					
-					let segment = [];
+					let annum = [];
 					
 					for(let month in table[year])
 					{
-						if(table[year][month].work == 0)
+						if(table[year][month].work == -1n)
 						{
-							segment.push("[" + PRINT.format(table[year][month].time) + "]" + "      0 H/s       -- H        -- H");
+							annum.push("[" + PRINT.format(table[year][month].time) + "]" + "       ---         ---         ---");
 							continue;
 						}
 						
@@ -100,12 +113,12 @@
 						totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
 						hashrate  = (parseFloat(hashrate)/1000**magnitude(hashrate)).toFixed(2) + " " + prefix(magnitude(hashrate)) + "H/s";
 						
-						segment.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
+						annum.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
 					}
 					
-					segment.sort((a, b)=>new Date(a.substring(1, 9))<new Date(b.substring(1, 9))?-1:1);
+					annum.sort((a, b)=>new Date(a.substring(1, 9))<new Date(b.substring(1, 9))?-1:1);
 					
-					output = output.concat(segment);
+					output = output.concat(annum);
 					
 					output.push("</div>");
 					
@@ -124,7 +137,11 @@
 				then(response=>response.ok?response.json().then(block =>
 				{				
 					if(table[YEAR.format(time)]==undefined) table[YEAR.format(time)] = {};
-					table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time), work: BigInt("0x" + block.data[0].chainwork) - work};
+					table[YEAR.format(time)][MONTH.format(time)] =
+					{
+						time: new Date(block.data.length?block.data[0].time:time),
+						work: block.data.length?BigInt("0x" + block.data[0].chainwork) - work:0n
+					};
 					
 					print(window.innerHeight + parseInt(window.scrollY) + 3*parseInt(window.getComputedStyle(document.body).fontSize) >= document.getElementById("page").offsetHeight);
 					
@@ -139,7 +156,7 @@
 						return;
 					}
 					
-					work = BigInt("0x" + block.data[0].chainwork);
+					if(block.data.length) work = BigInt("0x" + block.data[0].chainwork);
 					
 					timer = setTimeout(sync,  1000, time, work, chain);
 				}):timer = setTimeout(sync, 10000, time, work, chain))
@@ -208,15 +225,6 @@
 								time = table[year][month].time;
 								work += table[year][month].work;
 							}
-						}
-						
-						let date = new Date("2009-01-10");
-						
-						while(date<table["genesis"].time)
-						{
-							if(table[YEAR.format(date)]==undefined) table[YEAR.format(date)] = {};
-							table[YEAR.format(date)][MONTH.format(date)] = {time: new Date(date), work: 0};
-							date.setMonth(date.getMonth()+1);
 						}
 						
 						time = new Date(time);
@@ -321,7 +329,7 @@
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
-				<option value="testnet" name="" data-start="0" disabled>TST</option>
+				<option value="bitcoin/testnet" name="Testnet" data-start="0">TST</option>
 				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden>LCC</option>
 				<option value="*" name="SHA256D" hidden>ALL</option>
 			</select>
