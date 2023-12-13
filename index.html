@@ -65,10 +65,10 @@
 			
 			function print(scroll = false)
 			{
-				let date = table["genesis"].time;
-				let work = table["genesis"].work;
-				
+				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
+				
+				let date = table["genesis"]?table["genesis"].time:"", work = 0n;
 				
 				for(let year in table)
 				{
@@ -80,8 +80,16 @@
 					output.push("   Date       Hashrate      Work      Chainwork");
 					output.push("-----------------------------------------------");
 					
+					let segment = [];
+					
 					for(let month in table[year])
 					{
+						if(table[year][month].work == 0)
+						{
+							segment.push("[" + PRINT.format(table[year][month].time) + "]" + "      0 H/s       -- H        -- H");
+							continue;
+						}
+						
 						let totalwork = table[year][month].work;
 						let chainwork = (work += totalwork);
 						let hashrate  = totalwork/BigInt(Math.round((table[year][month].time - date)/1000+1));
@@ -92,8 +100,14 @@
 						totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
 						hashrate  = (parseFloat(hashrate)/1000**magnitude(hashrate)).toFixed(2) + " " + prefix(magnitude(hashrate)) + "H/s";
 						
-						output.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
+						segment.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
 					}
+					
+					segment.sort((a, b)=>new Date(a.substring(1, 9))<new Date(b.substring(1, 9))?-1:1);
+					
+					console.log(segment);
+					
+					output = output.concat(segment);
 					
 					output.push("</div>");
 					
@@ -133,32 +147,38 @@
 				}):timer = setTimeout(sync, 10000, time, work, chain))
 			}
 			
-			function download(chain)
+			function download(chain, start)
 			{
 				document.getElementById("chain").disabled = true;
 				
-				fetch(HOST+chain+"/blocks?q=id(0..1)&s=id(asc)").
+				fetch(HOST+chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
 				then(response=>response.ok?response.json().then(block =>
 				{
 					table = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
 					
-					sync(new Date(table["genesis"].time), table["genesis"].work);
+					sync(new Date(table["genesis"].time), table["genesis"].work, chain);
 					
-				}):timer = setTimeout(download, 10000, chain))
+				}):timer = setTimeout(download, 10000, chain, start))
 			}
 
 			window.onload = function()
 			{
 				(document.getElementById("chain").onchange = function()
 				{
-					let chain = document.getElementById("chain").value;
+					let chain = document.getElementById("chain").value, start;
 					
 					document.getElementById("chain").childNodes.forEach(option =>
 					{
-						if(option.value == document.getElementById("chain").value) document.getElementById("fork").innerText = option.getAttribute("name");
+						if(option.value == document.getElementById("chain").value)
+						{
+							document.getElementById("fork").innerText = option.getAttribute("name");
+							start = option.getAttribute("data-start");
+						}
 					});
 					
 					document.getElementById("chain").disabled = true;
+					
+					if(timer) clearTimeout(timer);
 				
 					fetch(chain+".json").
 					then(response=>response.ok?response.text().then(content =>
@@ -192,15 +212,22 @@
 							}
 						}
 						
+						let date = new Date("2009-01-10");
+						
+						while(date<table["genesis"].time)
+						{
+							if(table[YEAR.format(date)]==undefined) table[YEAR.format(date)] = {};
+							table[YEAR.format(date)][MONTH.format(date)] = {time: new Date(date), work: 0};
+							date.setMonth(date.getMonth()+1);
+						}
+						
 						time = new Date(time);
 						time.setDate(1);
 						time.setMonth(time.getMonth()+1);
 						
-						document.getElementById("page").hidden = false; print();
+						print(); sync(time, work, chain); 
 						
-						if(timer) clearTimeout(timer); sync(time, work, chain); 
-						
-					}):download(chain));
+					}):download(chain, start));
 				})()
 				
 				document.getElementById("page").onmousedown = window.onkeypress = function()
@@ -224,6 +251,7 @@
 			{
 				font-family: monospace;
 				height: 100%;
+				width: 100%;
 				margin: 0;
 			}
 			
@@ -252,8 +280,10 @@
 			#page
 			{
 				top: 50%;
+				left: 50%;
+				width:100%;
 				position: absolute;
-				transform: translateY(max(-50vh, -50%));
+				transform: translate(max(-50vw, -50%), max(-50vh, -50%));
 			}
 			
 			#heading
@@ -289,11 +319,12 @@
 		</div>
 		<div id="selector">
 			<select id="chain" disabled>
-				<option value="bitcoin" name="Bitcoin">BTC</option>
-				<option value="bitcoin-cash" name="Bitcoin Cash">BCH</option>
-				<option value="bitcoin-sv" name="Bitcoin SV" disabled>BSV</option>
-				<option value="ecash" name="eCash">XEC</option>
-				<option value="litecoin-cash" name="Litecoin Cash" hidden>LCC</option>
+				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
+				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
+				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
+				<option value="ecash" name="eCash" data-start="661647">XEC</option>
+				<option value="testnet" name="" data-start="0" disabled>TST</option>
+				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden>LCC</option>
 				<option value="*" name="SHA256D" hidden>ALL</option>
 			</select>
 		</div>
