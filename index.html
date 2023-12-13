@@ -61,7 +61,7 @@
 				let link = document.createElement("a");
 				
 				link.href = URL.createObjectURL(new Blob([output], {type: "application/json"}));
-				link.download = chain + ".json";
+				link.download = chain.replaceAll("/", "-") + ".json";
 				link.target = "_blank";
 				
 				link.click();
@@ -195,7 +195,7 @@
 					
 					if(timer) clearTimeout(timer);
 				
-					fetch(chain+".json").
+					fetch(chain.replaceAll("/", "-")+".json").
 					then(response=>response.ok?response.text().then(content =>
 					{
 						table = JSON.parse(content, (key, value) =>
