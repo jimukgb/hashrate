@@ -11,7 +11,7 @@
 			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
 			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
 
-			let chain = {}, table, timer;
+			let chain = {}, timer;
 			
 			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
@@ -25,7 +25,7 @@
 					return;
 				}
 				
-				let output = "{\n";
+				let table = chain[document.getElementById("chain").value], output = "{\n";
 				
 				output += "\t\"genesis\": {";
 				output += "\"time\": " + table["genesis"].time.getTime()/1000 + ", ";
@@ -73,9 +73,9 @@
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
-				let date = table["genesis"].time, period = new Date("2009-01-10"), work = 0n;
+				let table = chain[document.getElementById("chain").value], date = table["genesis"].time, period = new Date("2009-01"), work = 0n;
 						
-				while(period<date)
+				while(period.getMonth()+period.getFullYear()*12<date.getMonth()+date.getFullYear()*12)
 				{
 					if(table[YEAR.format(period)]==undefined) table[YEAR.format(period)] = {};
 					table[YEAR.format(period)][MONTH.format(period)] = {time: new Date(period), work: -1n};
@@ -134,7 +134,9 @@
 			{
 				fetch(HOST+localStorage.chain+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
 				then(response=>response.ok?response.json().then(block =>
-				{				
+				{
+					let table = chain[document.getElementById("chain").value];
+					
 					if(table[YEAR.format(time)]==undefined) table[YEAR.format(time)] = {};
 					table[YEAR.format(time)][MONTH.format(time)] =
 					{
@@ -168,6 +170,8 @@
 				fetch(HOST+localStorage.chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
 				then(response=>response.ok?response.json().then(block =>
 				{
+					let table = chain[document.getElementById("chain").value];
+					
 					table = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
 					
 					sync(new Date(table["genesis"].time), table["genesis"].work);
@@ -210,9 +214,7 @@
 						
 							if(chain[option.value])
 							{	
-								table = chain[option.value];
-								
-								let time, work = table["genesis"].work;
+								let table = chain[option.value], work = table["genesis"].work, time;
 
 								for(year in table)
 								{
