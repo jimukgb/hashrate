@@ -142,11 +142,11 @@
 						work: block.data.length?BigInt("0x" + block.data[0].chainwork) - work:0n
 					};
 					
-					print(window.innerHeight + parseInt(window.scrollY) + 3*parseInt(window.getComputedStyle(document.body).fontSize) >= document.getElementById("page").offsetHeight);
+					print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize) >= document.getElementById("page").offsetHeight);
 					
 					time.setDate(1); time.setMonth(time.getMonth()+1);
 					
-					if(12*time.getFullYear()+time.getMonth() > 12*new Date().getFullYear()+new Date().getMonth())
+					if(time.getMonth()+time.getFullYear()*12 > new Date().getMonth()+new Date().getFullYear()*12)
 					{
 						document.getElementById("chain").disabled = false;
 						
@@ -217,7 +217,7 @@
 							
 							for(month in table[year])
 							{
-								if(12*table[year][month].time.getFullYear()+table[year][month].time.getMonth() >= 12*new Date().getFullYear()+new Date().getMonth())
+								if(year == YEAR.format(new Date()) && month == MONTH.format(new Date()))
 								{
 									delete table[year][month];
 									continue;
