@@ -11,7 +11,7 @@
 			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
 			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
 
-			let table, timer;
+			let chain = {}, table, timer;
 			
 			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
@@ -175,31 +175,18 @@
 				}):timer = setTimeout(download, 10000, start))
 			}
 
-			window.onload = function()
+			window.onload = async function()
 			{
+				window.onkeypress = document.getElementById("page").onmousedown = () => document.getElementById("selector").classList.toggle("fade");
+				
 				document.getElementById("chain").value = localStorage.chain = (localStorage.chain?localStorage.chain:document.getElementById("chain").value);
 				
-				window.onkeypress = document.getElementById("page").onmousedown = function()
+				Array.from(document.getElementById("chain").children).forEach(option =>
 				{
-					document.getElementById("selector").classList.toggle("fade");
-				};
-			
-				(document.getElementById("chain").onchange = function()
-				{
-					let start, option = Array.from(document.getElementById("chain").children).filter(o => o.value==localStorage.chain)[0];
-					
-					if(timer) clearTimeout(timer);
-					
-					document.getElementById("fork").innerText = option.getAttribute("name");
-					start = option.getAttribute("data-start");
-
-					document.getElementById("chain").disabled = true;	
-					localStorage.chain = document.getElementById("chain").value;
-				
-					fetch(localStorage.chain.replaceAll("/", "-")+".json").
-					then(response=>response.ok?response.text().then(content =>
+					if(!option.hidden && !option.disabled) fetch(option.value.replaceAll("/", "-")+".json").
+					then(response=>response.text().then(content =>
 					{
-						table = JSON.parse(content, (key, value) =>
+						if(response.ok) chain[option.value] = JSON.parse(content, (key, value) =>
 						{
 							switch(key)
 							{
@@ -209,33 +196,51 @@
 							}
 						});
 						
-						let time, work = table["genesis"].work;
-
-						for(year in table)
+						if(option.value == localStorage.chain) (document.getElementById("chain").onchange = function()
 						{
-							if(year == "genesis") continue;
+							document.getElementById("chain").disabled = true;
+							localStorage.chain = document.getElementById("chain").value;
 							
-							for(month in table[year])
-							{
-								if(year == YEAR.format(new Date()) && month == MONTH.format(new Date()))
+							let start, option = Array.from(document.getElementById("chain").children).filter(option => option.value==localStorage.chain)[0];
+							
+							document.getElementById("fork").innerText = option.getAttribute("name");
+							start = option.getAttribute("data-start");
+							
+							if(timer) clearTimeout(timer);
+						
+							if(chain[option.value])
+							{	
+								table = chain[option.value];
+								
+								let time, work = table["genesis"].work;
+
+								for(year in table)
 								{
-									delete table[year][month];
-									continue;
+									if(year == "genesis") continue;
+									
+									for(month in table[year])
+									{
+										if(year == YEAR.format(new Date()) && month == MONTH.format(new Date()))
+										{
+											delete table[year][month];
+											continue;
+										}
+									
+										time = table[year][month].time;
+										work += table[year][month].work;
+									}
 								}
-							
-								time = table[year][month].time;
-								work += table[year][month].work;
+								
+								time = new Date(time);
+								time.setDate(1);
+								time.setMonth(time.getMonth()+1);
+								
+								print(); sync(time, work); 
 							}
-						}
-						
-						time = new Date(time);
-						time.setDate(1);
-						time.setMonth(time.getMonth()+1);
-						
-						print(); sync(time, work); 
-						
-					}):download(start));
-				})();
+							else download(start);
+						})();
+					}));
+				});
 			}
 			
 			window.onscroll = function()
