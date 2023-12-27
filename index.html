@@ -25,7 +25,6 @@
 					return;
 				}
 				
-				let chain = document.getElementById("chain").value;
 				let output = "{\n";
 				
 				output += "\t\"genesis\": {";
@@ -61,7 +60,7 @@
 				let link = document.createElement("a");
 				
 				link.href = URL.createObjectURL(new Blob([output], {type: "application/json"}));
-				link.download = chain.replaceAll("/", "-") + ".json";
+				link.download = localStorage.chain.replaceAll("/", "-") + ".json";
 				link.target = "_blank";
 				
 				link.click();
@@ -131,9 +130,9 @@
 					window.scrollTo({top: sessionStorage.position?sessionStorage.position:document.body.scrollHeight, behavior: sessionStorage.position?"instant":"smooth"});
 			}
 			
-			function sync(time, work, chain)
+			function sync(time, work)
 			{
-				fetch(HOST+chain+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
+				fetch(HOST+localStorage.chain+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
 				then(response=>response.ok?response.json().then(block =>
 				{				
 					if(table[YEAR.format(time)]==undefined) table[YEAR.format(time)] = {};
@@ -152,50 +151,52 @@
 						document.getElementById("chain").disabled = false;
 						
 						time.setMonth(time.getMonth()-1);
-						timer = setTimeout(sync, 150000, time, work, chain);
+						timer = setTimeout(sync, 150000, time, work);
 						return;
 					}
 					
 					if(block.data.length) work = BigInt("0x" + block.data[0].chainwork);
 					
-					timer = setTimeout(sync,  1000, time, work, chain);
-				}):timer = setTimeout(sync, 10000, time, work, chain))
+					timer = setTimeout(sync,  1000, time, work);
+				}):timer = setTimeout(sync, 10000, time, work))
 			}
 			
-			function download(chain, start)
+			function download(start)
 			{
 				document.getElementById("chain").disabled = true;
 				
-				fetch(HOST+chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
+				fetch(HOST+localStorage.chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
 				then(response=>response.ok?response.json().then(block =>
 				{
 					table = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
 					
-					sync(new Date(table["genesis"].time), table["genesis"].work, chain);
+					sync(new Date(table["genesis"].time), table["genesis"].work);
 					
-				}):timer = setTimeout(download, 10000, chain, start))
+				}):timer = setTimeout(download, 10000, start))
 			}
 
 			window.onload = function()
 			{
+				document.getElementById("chain").value = localStorage.chain = (localStorage.chain?localStorage.chain:document.getElementById("chain").value);
+				
+				window.onkeypress = document.getElementById("page").onmousedown = function()
+				{
+					document.getElementById("selector").classList.toggle("fade");
+				};
+			
 				(document.getElementById("chain").onchange = function()
 				{
-					let chain = document.getElementById("chain").value, start;
-					
-					document.getElementById("chain").childNodes.forEach(option =>
-					{
-						if(option.value == document.getElementById("chain").value)
-						{
-							document.getElementById("fork").innerText = option.getAttribute("name");
-							start = option.getAttribute("data-start");
-						}
-					});
-					
-					document.getElementById("chain").disabled = true;
+					let start, option = Array.from(document.getElementById("chain").children).filter(o => o.value==localStorage.chain)[0];
 					
 					if(timer) clearTimeout(timer);
+					
+					document.getElementById("fork").innerText = option.getAttribute("name");
+					start = option.getAttribute("data-start");
+
+					document.getElementById("chain").disabled = true;	
+					localStorage.chain = document.getElementById("chain").value;
 				
-					fetch(chain.replaceAll("/", "-")+".json").
+					fetch(localStorage.chain.replaceAll("/", "-")+".json").
 					then(response=>response.ok?response.text().then(content =>
 					{
 						table = JSON.parse(content, (key, value) =>
@@ -231,15 +232,10 @@
 						time.setDate(1);
 						time.setMonth(time.getMonth()+1);
 						
-						print(); sync(time, work, chain); 
+						print(); sync(time, work); 
 						
-					}):download(chain, start));
-				})()
-				
-				document.getElementById("page").onmousedown = window.onkeypress = function()
-				{
-					document.getElementById("selector").classList.toggle("fade");
-				}
+					}):download(start));
+				})();
 			}
 			
 			window.onscroll = function()
