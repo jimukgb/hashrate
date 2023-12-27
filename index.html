@@ -200,47 +200,52 @@
 							}
 						});
 						
-						if(option.value == localStorage.chain) (document.getElementById("chain").onchange = function()
+						if(option.value == localStorage.chain)
 						{
-							document.getElementById("chain").disabled = true;
-							localStorage.chain = document.getElementById("chain").value;
+							(document.getElementById("chain").onchange = function()
+							{
+								document.getElementById("chain").disabled = true;
+								localStorage.chain = document.getElementById("chain").value;
+								
+								let start, option = Array.from(document.getElementById("chain").children).filter(option => option.value==localStorage.chain)[0];
+								
+								document.getElementById("fork").innerText = option.getAttribute("name");
+								start = option.getAttribute("data-start");
+								
+								if(timer) clearTimeout(timer);
 							
-							let start, option = Array.from(document.getElementById("chain").children).filter(option => option.value==localStorage.chain)[0];
-							
-							document.getElementById("fork").innerText = option.getAttribute("name");
-							start = option.getAttribute("data-start");
-							
-							if(timer) clearTimeout(timer);
-						
-							if(chain[option.value])
-							{	
-								let table = chain[option.value], work = table["genesis"].work, time;
+								if(chain[option.value])
+								{	
+									let table = chain[option.value], work = table["genesis"].work, time;
 
-								for(year in table)
-								{
-									if(year == "genesis") continue;
-									
-									for(month in table[year])
+									for(year in table)
 									{
-										if(year == YEAR.format(new Date()) && month == MONTH.format(new Date()))
+										if(year == "genesis") continue;
+										
+										for(month in table[year])
 										{
-											delete table[year][month];
-											continue;
+											if(year == YEAR.format(new Date()) && month == MONTH.format(new Date()))
+											{
+												delete table[year][month];
+												continue;
+											}
+										
+											time = table[year][month].time;
+											work += table[year][month].work;
 										}
-									
-										time = table[year][month].time;
-										work += table[year][month].work;
 									}
+									
+									time = new Date(time);
+									time.setDate(1);
+									time.setMonth(time.getMonth()+1);
+									
+									sync(time, work);
 								}
-								
-								time = new Date(time);
-								time.setDate(1);
-								time.setMonth(time.getMonth()+1);
-								
-								print(); sync(time, work); 
-							}
-							else download(start);
-						})();
+								else download(start);
+							})();
+							
+							print();
+						}
 					}));
 				});
 			}
