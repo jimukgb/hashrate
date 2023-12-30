@@ -15,8 +15,8 @@
 			
 			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
-			function min(a) {let p =  true; for(let i in a) if(!a[i]) p = false; return p}
-			function max(a) {let p = false; for(let i in a) if( a[i]) p =  true; return p}
+			function min(a) {let p = false; for(let i in a) if(!a[i]) p = true; return p}
+			function max(a) {let p = false; for(let i in a) if( a[i]) p = true; return p}
 
 			function save()
 			{
@@ -70,7 +70,7 @@
 			
 			function print(scroll = false)
 			{
-				let output = [], time = {}, work = {}, count = {total: 1};
+				let output = [], time = {}, work = {}, count = {};
 				let fork = document.getElementById("chain").value!="total"?[document.getElementById("chain").value]:Object.keys(chain);
 				
 				for(let c in chain)
@@ -82,21 +82,18 @@
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
-				for(let date=new Date("2009"); date<=new Date() && max(count); date.setMonth(date.getMonth()+1), count["total"]=min(count))
+				for(let date=new Date("2009"); date<=new Date() && (chain[fork]?count[fork]:max(count)); date.setMonth(date.getMonth()+1))
 				{
 					let totalwork = {}, chainwork = {}, hashrate = {};
 					
-					fork.forEach(fork =>
+					fork.forEach(fork => {if(chain[fork][YEAR.format(date)] && chain[fork][YEAR.format(date)][MONTH.format(date)])
 					{
-						if(chain[fork][YEAR.format(date)] && chain[fork][YEAR.format(date)][MONTH.format(date)])
-						{
-							totalwork[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].work;
-							hashrate [fork] = totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
-							chainwork[fork] = (work[fork]+=totalwork[fork]);
-							
-							time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time; count[fork]--;
-						}
-					});
+						totalwork[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].work;
+						hashrate [fork] = totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
+						chainwork[fork] = (work[fork]+=totalwork[fork]);
+						
+						time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+					}});
 					
 					chainwork = (n=>{for(c in chainwork) n+=chainwork[c]; return n})(0n);
 					totalwork = (n=>{for(t in totalwork) n+=totalwork[t]; return n})(0n);
@@ -106,12 +103,14 @@
 					totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
 					hashrate  = (parseFloat(hashrate )/1000**magnitude(hashrate )).toFixed(2) + " " + prefix(magnitude(hashrate )) + "H/s";
 						
-					if(fork.length==1?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):!count["total"])
+					if(chain[fork]?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 						output.push("[" + PRINT.format(date) + "]" + "       ---         ---         ---");
 					else	
 						output.push("[" + PRINT.format(date) + "]" + hashrate.padStart(13, " ") + totalwork.padStart(12, " ") + chainwork.padStart(12, " "));
+						
+					fork.forEach(fork=>{if(chain[fork][YEAR.format(date)] && chain[fork][YEAR.format(date)][MONTH.format(date)]) count[fork]--});
 					
-					if(date.getMonth()+1==12 || !max(count))
+					if(date.getMonth()+1==12 || (chain[fork]?!count[fork]:!max(count)))
 					{
 						output.unshift("-----------------------------------------------");
 						output.unshift("   Date       Hashrate      Work      Chainwork");
