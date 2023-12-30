@@ -17,6 +17,7 @@
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
 			function min(a) {let p = false; for(let i in a) if(!a[i]) p = true; return p}
 			function max(a) {let p = false; for(let i in a) if( a[i]) p = true; return p}
+			function sum(a) {let n = 0; for(let i in a) n+=a[i]; return n}
 
 			function save()
 			{
@@ -94,14 +95,10 @@
 						
 						time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
 					}});
-					
-					chainwork = (n=>{for(c in chainwork) n+=chainwork[c]; return n})(0n);
-					totalwork = (n=>{for(t in totalwork) n+=totalwork[t]; return n})(0n);
-					hashrate  = (n=>{for(h in hashrate)  n+=hashrate [h]; return n})(0n);
 						
-					chainwork = (parseFloat(chainwork)/1000**magnitude(chainwork)).toFixed(3) + " " + prefix(magnitude(chainwork)) + "H";
-					totalwork = (parseFloat(totalwork)/1000**magnitude(totalwork)).toFixed(3) + " " + prefix(magnitude(totalwork)) + "H";
-					hashrate  = (parseFloat(hashrate )/1000**magnitude(hashrate )).toFixed(2) + " " + prefix(magnitude(hashrate )) + "H/s";
+					chainwork = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toFixed(3) + " " + prefix(magnitude(sum(chainwork))) + "H";
+					totalwork = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toFixed(3) + " " + prefix(magnitude(sum(totalwork))) + "H";
+					hashrate  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toFixed(2) + " " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(chain[fork]?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 						output.push("[" + PRINT.format(date) + "]" + "       ---         ---         ---");
