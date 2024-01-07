@@ -230,7 +230,7 @@
 							localStorage.period = document.getElementById("period").value;
 							
 							document.getElementById("fork").innerText     = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain)[0].getAttribute("name");
-							document.getElementById("duration").innerText = Array.from(document.getElementById("period").children).filter(o=>o.value==localStorage.period)[0].getAttribute("name");
+							document.getElementById("duration").innerHTML = Array.from(document.getElementById("period").children).filter(o=>o.value==localStorage.period)[0].getAttribute("name");
 							
 							if(timer) clearTimeout(timer);
 						
@@ -356,7 +356,7 @@
 		<div id="selector">
 			<select id="period">
 				<option value="month" name="Monthly">MONTH</option>
-				<option value="year" name="Annual">YEAR</option>
+				<option value="year" name="<br>Annual">YEAR</option>
 			</select>
 			<select id="chain" disabled>
 				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
