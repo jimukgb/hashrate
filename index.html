@@ -88,14 +88,14 @@
 			
 			function print(scroll = false)
 			{
-				let output = [], time = {}, work = {}, count = {};
+				let output = [], begin = {}, end = {}, count = {};
 				let totalwork = {}, chainwork = {}, hashrate = {}, out = {};
 				let period = document.getElementById("period").value;
 				let fork = document.getElementById("chain").value!="total"?[document.getElementById("chain").value]:Object.keys(chain);
 				
 				for(let c in chain)
 				{
-					time[c] = chain[c]["genesis"].time; work[c] = 0n;
+					begin[c] = chain[c]["genesis"].time; end[c] = new Date(0); chainwork[c] = 0n;
 					count[c] = 0; for(let y in chain[c]) if(y!="genesis") count[c] += Object.keys(chain[c][y]).length;
 					
 					totalwork[c] = 0n;
@@ -110,21 +110,29 @@
 					{
 						if(period=="month")
 						{
-							totalwork[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].work;
-							hashrate [fork] = totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
-							chainwork[fork] = (work[fork]+=totalwork[fork]);
-							time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+							end[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+						
+							totalwork[fork] =  chain[fork][YEAR.format(date)][MONTH.format(date)].work;
+							hashrate [fork] =  totalwork[fork]/BigInt(Math.round((end[fork]-begin[fork])/1000+1));
+							chainwork[fork] += totalwork[fork];
+							
+							begin[fork] = end[fork]
 						}
 						if(period=="year")
 						{
+							if(chain[fork][YEAR.format(date)][MONTH.format(date)].work) end[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+						
 							totalwork[fork] += chain[fork][YEAR.format(date)][MONTH.format(date)].work;
 							
 							if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
 							{
-								hashrate [fork] = totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
-								chainwork[fork] = (work[fork]+=totalwork[fork]);
-								time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+								hashrate [fork] =  totalwork[fork]/BigInt(Math.round((end[fork]-begin[fork])/1000+1));
+								chainwork[fork] += totalwork[fork];
+								
+								begin[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
 							}
+							
+							if(!chain[fork][YEAR.format(date)][MONTH.format(date)].work && begin[fork] > end[fork]) begin[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
 						}
 					}});
 					
@@ -176,7 +184,7 @@
 					if(block.data.length)
 						table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time), work: BigInt("0x"+block.data[0].chainwork)-work};
 					else
-						table[YEAR.format(time)][MONTH.format(time)] = {time: time, work: 0n};
+						table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(time.getFullYear(), time.getMonth()+1, 0, 23, 59, 59), work: 0n};
 					
 					print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize)>=document.getElementById("page").offsetHeight);
 					
