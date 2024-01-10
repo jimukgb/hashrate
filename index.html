@@ -23,7 +23,7 @@
 			{
 				let start = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain)[0].getAttribute("data-start");
 			
-				document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
+				document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 				document.getElementById("table").style = "color:grey";
 				
 				fetch(HOST+localStorage.chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
@@ -88,14 +88,14 @@
 			
 			function print(scroll = false)
 			{
-				let output = [], begin = {}, end = {}, count = {};
+				let output = [], time = {}, count = {};
 				let totalwork = {}, chainwork = {}, hashrate = {}, out = {};
 				let period = document.getElementById("period").value;
 				let fork = document.getElementById("chain").value!="total"?[document.getElementById("chain").value]:Object.keys(chain);
 				
 				for(let c in chain)
 				{
-					begin[c] = chain[c]["genesis"].time; end[c] = new Date(0); chainwork[c] = 0n;
+					time[c] = chain[c]["genesis"].time; chainwork[c] = 0n;
 					count[c] = 0; for(let y in chain[c]) if(y!="genesis") count[c] += Object.keys(chain[c][y]).length;
 					
 					totalwork[c] = 0n;
@@ -110,29 +110,23 @@
 					{
 						if(period=="month")
 						{
-							end[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
-						
 							totalwork[fork] =  chain[fork][YEAR.format(date)][MONTH.format(date)].work;
-							hashrate [fork] =  totalwork[fork]/BigInt(Math.round((end[fork]-begin[fork])/1000+1));
+							hashrate [fork] =  totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
 							chainwork[fork] += totalwork[fork];
 							
-							begin[fork] = end[fork]
+							time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time
 						}
 						if(period=="year")
 						{
-							if(chain[fork][YEAR.format(date)][MONTH.format(date)].work) end[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
-						
 							totalwork[fork] += chain[fork][YEAR.format(date)][MONTH.format(date)].work;
 							
 							if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
 							{
-								hashrate [fork] =  totalwork[fork]/BigInt(Math.round((end[fork]-begin[fork])/1000+1));
+								hashrate [fork] =  totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
 								chainwork[fork] += totalwork[fork];
 								
-								begin[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+								time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
 							}
-							
-							if(!chain[fork][YEAR.format(date)][MONTH.format(date)].work && begin[fork] > end[fork]) begin[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
 						}
 					}});
 					
@@ -193,7 +187,7 @@
 					if(time.getMonth()+time.getFullYear()*12 > new Date().getMonth()+new Date().getFullYear()*12)
 					{
 						document.getElementById("table").style = "color:black";
-						document.getElementById("period").disabled = document.getElementById("chain").disabled = false;
+						document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = false;
 						
 						time.setMonth(time.getMonth()-1);
 						timer = setTimeout(update, 150000, time, work);
@@ -244,7 +238,7 @@
 						
 							if(chain[localStorage.chain])
 							{
-								document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
+								document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 								document.getElementById("table").style = "color:grey";
 							
 								let table = chain[localStorage.chain], work = table["genesis"].work, time;
@@ -314,7 +308,7 @@
 				pointer-events: none;
 			}
 			
-			#chain, #period
+			#chain, #period, #network
 			{
 				font-family: monospace;
 				font-size: 34;
@@ -366,13 +360,16 @@
 				<option value="month" name="Monthly">MONTH</option>
 				<option value="year" name="<br>Annual">YEAR</option>
 			</select>
+			<select id="network">
+				<option value="" name="">MAIN</option>
+				<option value="testnet" name="Testnet" disabled>TEST</option>
+			</select>
 			<select id="chain" disabled>
 				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
 				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden>LCC</option>
-				<option value="bitcoin/testnet" name="Testnet" data-start="0">TST</option>
 				<option value="total" name="Global">ALL</option>
 			</select>
 		</div>
