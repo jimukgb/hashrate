@@ -11,7 +11,7 @@
 			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
 			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
 
-			let chain = {}, timer;
+			let chain = {}, timer, network = "";
 			
 			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
@@ -21,15 +21,15 @@
 			
 			function sync()
 			{
-				let start = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain)[0].getAttribute("data-start");
+				let start = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("data-start");
 			
 				document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 				document.getElementById("table").style = "color:grey";
 				
-				fetch(HOST+localStorage.chain+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
+				fetch(HOST+localStorage.chain+network+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
 				then(response=>response.ok?response.json().then(block =>
 				{
-					let table = chain[document.getElementById("chain").value] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+					let table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
 					
 					update(new Date(table["genesis"].time), table["genesis"].work);
 					
@@ -44,7 +44,7 @@
 					return;
 				}
 				
-				let table = chain[document.getElementById("chain").value], output = "{\n";
+				let table = chain[localStorage.chain+network], output = "{\n";
 				
 				output += "\t\"genesis\": {";
 				output += "\"time\": " + table["genesis"].time.getTime()/1000 + ", ";
@@ -78,7 +78,7 @@
 				let link = document.createElement("a");
 				
 				link.href = URL.createObjectURL(new Blob([output], {type: "application/json"}));
-				link.download = localStorage.chain.replaceAll("/", "-") + ".json";
+				link.download = localStorage.chain+network.replaceAll("/", "-")+".json";
 				link.target = "_blank";
 				
 				link.click();
@@ -91,7 +91,7 @@
 				let output = [], time = {}, count = {};
 				let totalwork = {}, chainwork = {}, hashrate = {}, out = {};
 				let period = document.getElementById("period").value;
-				let fork = document.getElementById("chain").value!="total"?[document.getElementById("chain").value]:Object.keys(chain);
+				let fork = localStorage.chain!="total"?[localStorage.chain+network]:Object.keys(chain);
 				
 				for(let c in chain)
 				{
@@ -168,10 +168,10 @@
 			
 			function update(time, work)
 			{
-				fetch(HOST+localStorage.chain+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
+				fetch(HOST+localStorage.chain+network+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
 				then(response=>response.ok?response.json().then(block =>
 				{
-					let table = chain[document.getElementById("chain").value];
+					let table = chain[localStorage.chain+network];
 					
 					if(!table[YEAR.format(time)])
 						table[YEAR.format(time)] = {};
@@ -213,8 +213,7 @@
 				
 				Array.from(document.getElementById("chain").children).forEach(option =>
 				{
-					if(!option.hidden && !option.disabled && option.value!="total") fetch(option.value.replaceAll("/", "-")+".json").
-					then(response=>response.text().then(content =>
+					if(!option.disabled && option.value!="total") fetch(option.value.replaceAll("/", "-")+".json").then(response=>response.text().then(content =>
 					{
 						if(response.ok) chain[option.value] = JSON.parse(content, (key, value) =>
 						{
@@ -226,22 +225,32 @@
 							}
 						});
 						
-						if(option.value == localStorage.chain) (document.getElementById("period").onchange = document.getElementById("chain").onchange = function()
+						if(option.value == localStorage.chain)
+						(document.getElementById("network").onchange = document.getElementById("period").onchange = document.getElementById("chain").onchange = function()
 						{
-							localStorage.chain  = document.getElementById("chain").value;
+							localStorage.chain = document.getElementById("chain").value;
 							localStorage.period = document.getElementById("period").value;
 							
-							document.getElementById("fork").innerText     = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain)[0].getAttribute("name");
+							if(localStorage.chain != "bitcoin")
+							{
+								document.getElementById("network").value = "";
+								document.getElementById("network").children[1].disabled = true;
+							}
+							else document.getElementById("network").children[1].disabled = false;
+							
+							network = (document.getElementById("network").value==""?"":"/"+document.getElementById("network").value);
+							
+							document.getElementById("fork").innerText     = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("name");
 							document.getElementById("duration").innerHTML = Array.from(document.getElementById("period").children).filter(o=>o.value==localStorage.period)[0].getAttribute("name");
 							
 							if(timer) clearTimeout(timer);
 						
-							if(chain[localStorage.chain])
+							if(chain[localStorage.chain+network])
 							{
 								document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 								document.getElementById("table").style = "color:grey";
 							
-								let table = chain[localStorage.chain], work = table["genesis"].work, time;
+								let table = chain[localStorage.chain+network], work = table["genesis"].work, time;
 
 								for(year in table)
 								{
@@ -361,15 +370,15 @@
 				<option value="year" name="<br>Annual">YEAR</option>
 			</select>
 			<select id="network" disabled>
-				<option value="" name="">MAIN</option>
-				<option value="testnet" name="Testnet" disabled>TEST</option>
+				<option value="">MAIN</option>
+				<option value="testnet">TEST</option>
 			</select>
 			<select id="chain" disabled>
 				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
+				<option value="bitcoin/testnet" name="Testnet" data-start="0" hidden>TST</option>
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
-				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden>LCC</option>
 				<option value="total" name="Global">ALL</option>
 			</select>
 		</div>
