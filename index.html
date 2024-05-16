@@ -91,41 +91,41 @@
 				let output = [], time = {}, count = {};
 				let totalwork = {}, chainwork = {}, hashrate = {}, out = {};
 				let period = document.getElementById("period").value;
-				let fork = localStorage.chain!="total"?[localStorage.chain+network]:Object.keys(chain);
+				let fork = localStorage.chain!="total"?[localStorage.chain+network]:Object.keys(chain).filter(k => !k.includes("testnet"));
 				
-				for(let c in chain)
+				fork.forEach(f =>
 				{
-					time[c] = chain[c]["genesis"].time; chainwork[c] = 0n;
-					count[c] = 0; for(let y in chain[c]) if(y!="genesis") count[c] += Object.keys(chain[c][y]).length;
+					time[f] = chain[f]["genesis"].time; chainwork[f] = 0n;
+					count[f] = 0; for(let y in chain[f]) if(y!="genesis") count[f] += Object.keys(chain[f][y]).length;
 					
-					totalwork[c] = 0n;
-				}
+					totalwork[f] = 0n;
+				});
 				
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
-				for(let date=new Date("2009"); date<=new Date() && (chain[fork]?count[fork]:max(count)); date.setMonth(date.getMonth()+1))
+				for(let date=new Date("2009"); date<=new Date() && max(count); date.setMonth(date.getMonth()+1))
 				{
-					fork.forEach(fork => {if(chain[fork][YEAR.format(date)] && chain[fork][YEAR.format(date)][MONTH.format(date)])
+					fork.forEach(f => {if(chain[f][YEAR.format(date)] && chain[f][YEAR.format(date)][MONTH.format(date)])
 					{
 						if(period=="month")
 						{
-							totalwork[fork] =  chain[fork][YEAR.format(date)][MONTH.format(date)].work;
-							hashrate [fork] =  totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
-							chainwork[fork] += totalwork[fork];
+							totalwork[f] =  chain[f][YEAR.format(date)][MONTH.format(date)].work;
+							hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
+							chainwork[f] += totalwork[f];
 							
-							time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time
+							time[f] = chain[f][YEAR.format(date)][MONTH.format(date)].time
 						}
 						if(period=="year")
 						{
-							totalwork[fork] += chain[fork][YEAR.format(date)][MONTH.format(date)].work;
+							totalwork[f] += chain[f][YEAR.format(date)][MONTH.format(date)].work;
 							
 							if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
 							{
-								hashrate [fork] =  totalwork[fork]/BigInt(Math.round((chain[fork][YEAR.format(date)][MONTH.format(date)].time-time[fork])/1000+1));
-								chainwork[fork] += totalwork[fork];
+								hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
+								chainwork[f] += totalwork[f];
 								
-								time[fork] = chain[fork][YEAR.format(date)][MONTH.format(date)].time;
+								time[f] = chain[f][YEAR.format(date)][MONTH.format(date)].time;
 							}
 						}
 					}});
@@ -135,7 +135,7 @@
 					out.hash  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toFixed(2) + " " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getMonth()+1==12 || API.format(date)==API.format(new Date())))
-						if(chain[fork]?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
+						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + "       ---         ---         ---");
 						else	
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") +
@@ -379,6 +379,7 @@
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
+				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden disabled>LCC</option>
 				<option value="total" name="Global">ALL</option>
 			</select>
 		</div>
