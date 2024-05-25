@@ -4,7 +4,8 @@
 		<link rel="icon" type="image/x-icon" href="bitcoin.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 		<script>
-			let HOST  = "https://api.blockchair.com/";
+			let HOST   = "https://api.blockchair.com/";
+			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/main/";
 			
 			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric"});
 			let PRINT = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
@@ -18,22 +19,28 @@
 			function min(a) {let p = false; for(let i in a) if(!a[i]) p = true; return p}
 			function max(a) {let p = false; for(let i in a) if( a[i]) p = true; return p}
 			function sum(a) {let n = 0n; for(let i in a) n+=a[i]; return n}
+			function sleep(ms) {return new Promise(r => setTimeout(r, ms))}
 			
-			function sync()
+			async function sync()
 			{
-				let start = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("data-start");
+				let table, start = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("data-start");
 			
 				document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 				document.getElementById("table").style = "color:grey";
 				
-				fetch(HOST+localStorage.chain+network+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").
-				then(response=>response.ok?response.json().then(block =>
+				if(document.getElementById("chain").value!="bitcoin-sv")
+				fetch(HOST+localStorage.chain+network+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").then(response=>response.ok?response.json().then(block =>
 				{
-					let table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+				}):timer = setTimeout(sync, 10000));
+				else
+				{
+					let block = await (await fetch(HOSTSV+"block/height/"+start+"/stats")).json(); await sleep(1000);
 					
-					update(new Date(table["genesis"].time), table["genesis"].work);
-					
-				}):timer = setTimeout(sync, 10000))
+					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.time*1000), work: BigInt("0x" + block.chainwork)}};
+				}
+				
+				update(new Date(table["genesis"].time), table["genesis"].work);
 			}
 
 			function save()
@@ -93,42 +100,46 @@
 				let period = document.getElementById("period").value;
 				let fork = localStorage.chain!="total"?[localStorage.chain+network]:Object.keys(chain).filter(k => !k.includes("testnet"));
 				
-				fork.forEach(f =>
+				fork.forEach(f => {if(chain[f])
 				{
 					time[f] = chain[f]["genesis"].time; chainwork[f] = 0n;
 					count[f] = 0; for(let y in chain[f]) if(y!="genesis") count[f] += Object.keys(chain[f][y]).length;
 					
 					totalwork[f] = 0n;
-				});
+				}});
 				
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
 				for(let date=new Date("2009"); date<=new Date() && max(count); date.setMonth(date.getMonth()+1))
 				{
-					fork.forEach(f => {if(chain[f][YEAR.format(date)] && chain[f][YEAR.format(date)][MONTH.format(date)])
+					fork.forEach(f =>
 					{
-						if(period=="month")
+						if(chain[f][YEAR.format(date)] && chain[f][YEAR.format(date)][MONTH.format(date)])
 						{
-							totalwork[f] =  chain[f][YEAR.format(date)][MONTH.format(date)].work;
-							hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
-							chainwork[f] += totalwork[f];
-							
-							time[f] = chain[f][YEAR.format(date)][MONTH.format(date)].time
-						}
-						if(period=="year")
-						{
-							totalwork[f] += chain[f][YEAR.format(date)][MONTH.format(date)].work;
-							
-							if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
+							if(period=="month")
 							{
+								totalwork[f] =  chain[f][YEAR.format(date)][MONTH.format(date)].work;
 								hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
 								chainwork[f] += totalwork[f];
 								
 								time[f] = chain[f][YEAR.format(date)][MONTH.format(date)].time;
 							}
+							if(period=="year")
+							{
+								totalwork[f] += chain[f][YEAR.format(date)][MONTH.format(date)].work;
+								
+								if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
+								{
+									hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
+									chainwork[f] += totalwork[f];
+									
+									time[f] = chain[f][YEAR.format(date)][MONTH.format(date)].time;
+								}
+							}
 						}
-					}});
+						else {totalwork[f] = 0n; hashrate [f] = 0n;}
+					});
 					
 					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toFixed(3) + " " + prefix(magnitude(sum(chainwork))) + "H";
 					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toFixed(3) + " " + prefix(magnitude(sum(totalwork))) + "H";
@@ -166,13 +177,13 @@
 					window.scrollTo({top: sessionStorage.position?sessionStorage.position:document.body.scrollHeight, behavior: sessionStorage.position?"instant":"smooth"});
 			}
 			
-			function update(time, work)
+			async function update(time, work)
 			{
-				fetch(HOST+localStorage.chain+network+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").
-				then(response=>response.ok?response.json().then(block =>
+				let table = chain[localStorage.chain+network];
+				
+				if(document.getElementById("chain").value!="bitcoin-sv")
+				fetch(HOST+localStorage.chain+network+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").then(response=>response.ok?response.json().then(block =>
 				{
-					let table = chain[localStorage.chain+network];
-					
 					if(!table[YEAR.format(time)])
 						table[YEAR.format(time)] = {};
 					if(block.data.length)
@@ -197,7 +208,50 @@
 					if(block.data.length) work = BigInt("0x" + block.data[0].chainwork);
 					
 					timer = setTimeout(update,  1000, time, work);
-				}):timer = setTimeout(update, 10000, time, work))
+				}):timer = setTimeout(update, 10000, time, work));
+				else
+				{
+					let start   = parseInt(Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("data-start"));
+					let end     = await (await fetch(HOSTSV+"chain/info")).json(); //await sleep(1000);
+					let finish  = parseInt(end.blocks);
+					let present = new Date(), height  = 0;
+					
+					present.setDate(1);  present.setHours(0);  present.setMinutes(0);  present.setSeconds(0); present.setMilliseconds(0);
+					time.setDate(1); time.setHours(0); time.setMinutes(0); time.setSeconds(0);
+					
+					while(finish-height)
+					{
+						let next = new Date(time); next.setMonth(next.getMonth()+1);
+						
+						while(finish-start>1 && present>time)
+						{
+							let middle = parseInt(start+(finish-start)/2);
+							
+							if(next<new Date((await (await fetch(HOSTSV+"block/height/"+middle+"/stats")).json()).time*1000)) finish=middle; else start=middle; await sleep(1000);
+						}
+						
+						height = (time>=present?parseInt(end.blocks):start);
+						
+						let block = await (await fetch(HOSTSV+"block/height/"+height+"/stats")).json();
+						
+						let date = new Date(block.time*1000);
+						let chainwork = BigInt("0x"+block.chainwork);
+						
+						if(!table[YEAR.format(date)]) table[YEAR.format(date)] = {};
+						
+						table[YEAR.format(date)][MONTH.format(date)] = {time: date, work: chainwork-work};
+						
+						print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize)>=document.getElementById("page").offsetHeight);
+						
+						finish = end.blocks;
+						work   = chainwork;
+						
+						time.setMonth(time.getMonth()+1);
+					}
+					
+					document.getElementById("table").style = "color:black";
+					document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = false;
+				}
 			}
 
 			window.onload = function()
@@ -240,7 +294,7 @@
 							
 							network = (document.getElementById("network").value==""?"":"/"+document.getElementById("network").value);
 							
-							document.getElementById("fork").innerText     = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("name");
+							document.getElementById("fork").innerText = Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("name");
 							document.getElementById("duration").innerHTML = Array.from(document.getElementById("period").children).filter(o=>o.value==localStorage.period)[0].getAttribute("name");
 							
 							if(timer) clearTimeout(timer);
@@ -269,9 +323,7 @@
 									}
 								}
 								
-								time = new Date(time);
-								time.setDate(1);
-								time.setMonth(time.getMonth()+1);
+								time = new Date(time); time.setDate(1); time.setMonth(time.getMonth()+1);
 								
 								update(time, work);
 							}
@@ -377,7 +429,7 @@
 				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
 				<option value="bitcoin/testnet" name="Testnet" data-start="0" hidden>TST</option>
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
-				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766" disabled>BSV</option>
+				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766">BSV</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
 				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden disabled>LCC</option>
 				<option value="total" name="Global">ALL</option>
