@@ -394,11 +394,6 @@
 				padding-bottom: 10px;
 			}
 			
-			@media only screen and (max-width: 768px)
-			{
-				#heading{padding-top: 100px;}
-			}
-			
 			#table
 			{
 				display: flex;
@@ -411,6 +406,20 @@
 			#table > div
 			{
 				margin: 10px;
+			}
+			
+			@media only screen and (max-width: 768px)
+			{
+				#heading
+				{
+					padding-top: 100px;
+				}
+				
+				#selector
+				{
+					right: 50%;
+					transform: translateX(50%);
+				}
 			}
 		</style>
 	</head>
