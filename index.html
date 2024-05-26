@@ -227,9 +227,18 @@
 						{
 							let middle = parseInt(start+(finish-start)/2);
 							
-							if(next<new Date((await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+middle+(network?"":"/stats"))).json()).time*1000)) finish=middle; else start=middle;
-							
-							await sleep(1000);
+							try
+							{
+								if(next<new Date((await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+middle+(network?"":"/stats"))).json()).time*1000)) finish=middle; else start=middle;
+							}
+							catch
+							{
+								await sleep(9000);
+							}
+							finally
+							{
+								await sleep(1000);
+							}
 						}
 						
 						height = (time>=present?parseInt(end.blocks):start);
