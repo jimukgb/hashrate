@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 		<script>
 			let HOST   = "https://api.blockchair.com/";
-			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/main/";
+			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/";
 			
 			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric"});
 			let PRINT = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
@@ -35,7 +35,7 @@
 				}):timer = setTimeout(sync, 10000));
 				else
 				{
-					let block = await (await fetch(HOSTSV+"block/height/"+start+"/stats")).json(); await sleep(1000);
+					let block = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+start+(network?"":"/stats"))).json(); await sleep(1000);
 					
 					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.time*1000), work: BigInt("0x" + block.chainwork)}};
 				}
@@ -212,7 +212,7 @@
 				else
 				{
 					let start   = parseInt(Array.from(document.getElementById("chain").children).filter(o=>o.value==localStorage.chain+network)[0].getAttribute("data-start"));
-					let end     = await (await fetch(HOSTSV+"chain/info")).json(); //await sleep(1000);
+					let end     = await (await fetch(HOSTSV+(network?"test":"main")+"/chain/info")).json();
 					let finish  = parseInt(end.blocks);
 					let present = new Date(), height  = 0;
 					
@@ -227,12 +227,14 @@
 						{
 							let middle = parseInt(start+(finish-start)/2);
 							
-							if(next<new Date((await (await fetch(HOSTSV+"block/height/"+middle+"/stats")).json()).time*1000)) finish=middle; else start=middle; await sleep(1000);
+							if(next<new Date((await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+middle+(network?"":"/stats"))).json()).time*1000)) finish=middle; else start=middle;
+							
+							await sleep(1000);
 						}
 						
 						height = (time>=present?parseInt(end.blocks):start);
 						
-						let block = await (await fetch(HOSTSV+"block/height/"+height+"/stats")).json();
+						let block = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+height+(network?"":"/stats"))).json();
 						
 						let date = new Date(block.time*1000);
 						let chainwork = BigInt("0x"+block.chainwork);
@@ -285,7 +287,7 @@
 							localStorage.chain = document.getElementById("chain").value;
 							localStorage.period = document.getElementById("period").value;
 							
-							if(localStorage.chain != "bitcoin")
+							if(localStorage.chain!="bitcoin" && localStorage.chain!="bitcoin-sv")
 							{
 								document.getElementById("network").value = "";
 								document.getElementById("network").children[1].disabled = true;
@@ -438,6 +440,7 @@
 				<option value="bitcoin/testnet" name="Testnet" data-start="0" hidden>TST</option>
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766">BSV</option>
+				<option value="bitcoin-sv/testnet" name="BSV Testnet" data-start="1155876" hidden>SVT</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
 				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden disabled>LCC</option>
 				<option value="total" name="Global">ALL</option>
