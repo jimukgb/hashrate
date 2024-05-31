@@ -32,15 +32,18 @@
 				fetch(HOST+localStorage.chain+network+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").then(response=>response.ok?response.json().then(block =>
 				{
 					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+					
+					update(new Date(table["genesis"].time), table["genesis"].work);
+					
 				}):timer = setTimeout(sync, 10000));
 				else
 				{
 					let block = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+start+(network?"":"/stats"))).json(); await sleep(1000);
 					
 					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.time*1000), work: BigInt("0x" + block.chainwork)}};
+					
+					update(new Date(table["genesis"].time), table["genesis"].work);
 				}
-				
-				update(new Date(table["genesis"].time), table["genesis"].work);
 			}
 
 			function save()
@@ -181,8 +184,11 @@
 			{
 				let table = chain[localStorage.chain+network];
 				
+				time.setHours(23); time.setMinutes(59); time.setSeconds(59);
+				time.setDate(1); time.setMonth(time.getMonth()+1); time.setDate(0);
+				
 				if(document.getElementById("chain").value!="bitcoin-sv")
-				fetch(HOST+localStorage.chain+network+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").then(response=>response.ok?response.json().then(block =>
+				fetch(HOST+localStorage.chain+network+"/blocks?q=time(.."+time.toISOString().substr(0, 19).replace("T", " ")+")&s=id(desc)&limit=1").then(response=>response.ok?response.json().then(block =>
 				{
 					if(!table[YEAR.format(time)])
 						table[YEAR.format(time)] = {};
