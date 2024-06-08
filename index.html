@@ -7,14 +7,14 @@
 			let HOST   = "https://api.blockchair.com/";
 			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/";
 			
-			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric"});
-			let PRINT = new Intl.DateTimeFormat("en", {year: "numeric", month: "short"});
-			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric"});
-			let MONTH = new Intl.DateTimeFormat("en", {month: "long"});
+			let API   = new Intl.DateTimeFormat("fr-ca", {year: "numeric", month: "numeric", timeZone: "UTC"});
+			let PRINT = new Intl.DateTimeFormat("en", {year: "numeric", month: "short", timeZone: "UTC"});
+			let YEAR  = new Intl.DateTimeFormat("en", {year: "numeric", timeZone: "UTC"});
+			let MONTH = new Intl.DateTimeFormat("en", {month: "long", timeZone: "UTC"});
 
 			let chain = {}, timer, network = "";
 			
-			function prefix(m){return m==0?" ":m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯"}
+			function prefix(m){return m?m==1?"K":m==2?"M":m==3?"G":m==4?"T":m==5?"P":m==6?"E":m==7?"Z":m==8?"Y":m==9?"R":m==10?"Q":"🤯":" "}
 			function magnitude(w){return w?parseInt(Math.floor(Math.log10(parseFloat(w))/3)):0}
 			function min(a) {let p = false; for(let i in a) if(!a[i]) p = true; return p}
 			function max(a) {let p = false; for(let i in a) if( a[i]) p = true; return p}
@@ -31,16 +31,19 @@
 				if(document.getElementById("chain").value!="bitcoin-sv")
 				fetch(HOST+localStorage.chain+network+"/blocks?q=id(" + start + ".." + (parseInt(start) + 1) + ")&s=id(asc)").then(response=>response.ok?response.json().then(block =>
 				{
-					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time), work: BigInt("0x" + block.data[0].chainwork)}};
+					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.data[1].time+" GMT"), work: BigInt("0x" + block.data[0].chainwork)}};
 					
 					update(new Date(table["genesis"].time), table["genesis"].work);
 					
 				}):timer = setTimeout(sync, 10000));
 				else
 				{
-					let block = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+start+(network?"":"/stats"))).json(); await sleep(1000);
+					let block = {};
 					
-					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block.time*1000), work: BigInt("0x" + block.chainwork)}};
+					block[0] = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+start+(network?"":"/stats"))).json(); await sleep(1000);
+					block[1] = await (await fetch(HOSTSV+(network?"test":"main")+"/block/height/"+(parseInt(start)+1)+(network?"":"/stats"))).json(); await sleep(1000);
+					
+					table = chain[localStorage.chain+network] = {genesis: {time: new Date(block[1].time*1000), work: BigInt("0x" + block[0].chainwork)}};
 					
 					update(new Date(table["genesis"].time), table["genesis"].work);
 				}
@@ -105,16 +108,17 @@
 				
 				fork.forEach(f => {if(chain[f])
 				{
-					time[f] = chain[f]["genesis"].time; chainwork[f] = 0n;
+					time[f]  = chain[f]["genesis"].time;
 					count[f] = 0; for(let y in chain[f]) if(y!="genesis") count[f] += Object.keys(chain[f][y]).length;
 					
+					chainwork[f] = 0n;
 					totalwork[f] = 0n;
 				}});
 				
 				document.getElementById("page").hidden = false;
 				document.getElementById("table").innerHTML = "";
 				
-				for(let date=new Date("2009"); date<=new Date() && max(count); date.setMonth(date.getMonth()+1))
+				for(let date=new Date("2009"); date<=new Date() && max(count); date.setUTCMonth(date.getUTCMonth()+1))
 				{
 					fork.forEach(f =>
 					{
@@ -132,7 +136,7 @@
 							{
 								totalwork[f] += chain[f][YEAR.format(date)][MONTH.format(date)].work;
 								
-								if(date.getMonth()+1==12 || API.format(date)==API.format(new Date()))
+								if(date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date()))
 								{
 									hashrate [f] =  totalwork[f]/BigInt(Math.round((chain[f][YEAR.format(date)][MONTH.format(date)].time-time[f])/1000+1));
 									chainwork[f] += totalwork[f];
@@ -148,7 +152,7 @@
 					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toFixed(3) + " " + prefix(magnitude(sum(totalwork))) + "H";
 					out.hash  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toFixed(2) + " " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
-					if(period=="month" || period=="year" && (date.getMonth()+1==12 || API.format(date)==API.format(new Date())))
+					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + "       ---         ---         ---");
 						else	
@@ -158,10 +162,10 @@
 					fork.forEach(fork =>
 					{
 						if(chain[fork][YEAR.format(date)] && chain[fork][YEAR.format(date)][MONTH.format(date)]) count[fork]--;
-						if(period=="year" && (date.getMonth()+1==12 || (chain[fork]?!count[fork]:!max(count)))) totalwork[fork] = 0n;
+						if(period=="year" && (date.getUTCMonth()+1==12 || (chain[fork]?!count[fork]:!max(count)))) totalwork[fork] = 0n;
 					});
 					
-					if(period=="month" && date.getMonth()+1==12 || (chain[fork]?!count[fork]:!max(count)))
+					if(period=="month" && date.getUTCMonth()+1==12 || (chain[fork]?!count[fork]:!max(count)))
 					{
 						output.unshift("-----------------------------------------------");
 						output.unshift((period=="month"?"   Date":" Date  ") + "       Hashrate      Work      Chainwork");
@@ -184,29 +188,23 @@
 			{
 				let table = chain[localStorage.chain+network];
 				
-				time.setHours(23); time.setMinutes(59); time.setSeconds(59);
-				time.setDate(1); time.setMonth(time.getMonth()+1); time.setDate(0);
-				
 				if(document.getElementById("chain").value!="bitcoin-sv")
-				fetch(HOST+localStorage.chain+network+"/blocks?q=time(.."+time.toISOString().substr(0, 19).replace("T", " ")+")&s=id(desc)&limit=1").then(response=>response.ok?response.json().then(block =>
+				fetch(HOST+localStorage.chain+network+"/blocks?q=time("+API.format(time)+")&s=id(desc)&limit=1").then(response=>response.ok?response.json().then(block =>
 				{
-					if(!table[YEAR.format(time)])
-						table[YEAR.format(time)] = {};
-					if(block.data.length)
-						table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time), work: BigInt("0x"+block.data[0].chainwork)-work};
-					else
-						table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(time.getFullYear(), time.getMonth()+1, 0, 23, 59, 59), work: 0n};
+					if(!table[YEAR.format(time)]) table[YEAR.format(time)] = {};
+					
+					table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.data[0].time+" GMT"), work: BigInt("0x"+block.data[0].chainwork)-work};
 					
 					print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize)>=document.getElementById("page").offsetHeight);
 					
-					time.setDate(1); time.setMonth(time.getMonth()+1);
+					time.setUTCDate(1); time.setUTCMonth(time.getUTCMonth()+1);
 					
-					if(time.getMonth()+time.getFullYear()*12 > new Date().getMonth()+new Date().getFullYear()*12)
+					if(time.getUTCMonth()+time.getUTCFullYear()*12 > new Date().getUTCMonth()+new Date().getUTCFullYear()*12)
 					{
 						document.getElementById("table").style = "color:black";
 						document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = false;
 						
-						time.setMonth(time.getMonth()-1);
+						time.setUTCMonth(time.getUTCMonth()-1);
 						timer = setTimeout(update, 150000, time, work);
 						return;
 					}
@@ -222,12 +220,12 @@
 					let finish  = parseInt(end.blocks);
 					let present = new Date(), height  = 0;
 					
-					present.setDate(1);  present.setHours(0);  present.setMinutes(0);  present.setSeconds(0); present.setMilliseconds(0);
-					time.setDate(1); time.setHours(0); time.setMinutes(0); time.setSeconds(0);
+					present.setUTCDate(1);  present.setUTCHours(0);  present.setUTCMinutes(0);  present.setUTCSeconds(0); present.setMilliseconds(0);
+					time.setUTCDate(1); time.setUTCHours(0); time.setUTCMinutes(0); time.setUTCSeconds(0);
 					
 					while(finish-height)
 					{
-						let next = new Date(time); next.setMonth(next.getMonth()+1);
+						let next = new Date(time); next.setUTCMonth(next.getUTCMonth()+1);
 						
 						while(finish-start>1 && present>time)
 						{
@@ -254,16 +252,15 @@
 						let date = new Date(block.time*1000);
 						let chainwork = BigInt("0x"+block.chainwork);
 						
-						if(!table[YEAR.format(date)]) table[YEAR.format(date)] = {};
-						
-						table[YEAR.format(date)][MONTH.format(date)] = {time: date, work: chainwork-work};
+						if(!table[YEAR.format(time)]) table[YEAR.format(time)] = {};
+						table[YEAR.format(time)][MONTH.format(time)] = {time: date, work: chainwork-work};
 						
 						print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize)>=document.getElementById("page").offsetHeight);
 						
 						finish = end.blocks;
 						work   = chainwork;
 						
-						time.setMonth(time.getMonth()+1);
+						time.setUTCMonth(time.getUTCMonth()+1);
 					}
 					
 					document.getElementById("table").style = "color:black";
@@ -340,7 +337,7 @@
 									}
 								}
 								
-								time = new Date(time); time.setDate(1); time.setMonth(time.getMonth()+1);
+								time = new Date(time); time.setUTCDate(1); time.setUTCMonth(time.getUTCMonth()+1);
 								
 								update(time, work);
 							}
@@ -452,10 +449,10 @@
 			</select>
 			<select id="chain" disabled>
 				<option value="bitcoin" name="Bitcoin" data-start="0">BTC</option>
-				<option value="bitcoin/testnet" name="Testnet" data-start="0" hidden>TST</option>
+				<option value="bitcoin/testnet" name="Testnet" data-start="513" hidden>TST</option>
 				<option value="bitcoin-cash" name="Bitcoin Cash" data-start="478558">BCH</option>
 				<option value="bitcoin-sv" name="Bitcoin SV" data-start="556766">BSV</option>
-				<option value="bitcoin-sv/testnet" name="BSV Testnet" data-start="1155876" hidden>SVT</option>
+				<option value="bitcoin-sv/testnet" name="BSV Testnet" data-start="1155875" hidden>SVT</option>
 				<option value="ecash" name="eCash" data-start="661647">XEC</option>
 				<option value="litecoin-cash" name="Litecoin Cash" data-start="0" hidden disabled>LCC</option>
 				<option value="total" name="Global">ALL</option>
