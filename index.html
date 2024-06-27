@@ -291,11 +291,9 @@
 							
 							return fetch(HOSTSV+(network?"test":"main")+"/chain/info").then(r=>r.json()).then(info =>
 							{
-								fetch(HOSTSV+(network?"test":"main")+"/block/height/"+info.blocks+(network?"":"/stats")).then(r=>r.json()).then(block => 
+								return fetch(HOSTSV+(network?"test":"main")+"/block/height/"+info.blocks+(network?"":"/stats")).then(r=>r.json()).then(block => 
 								{
 									table[YEAR.format(time)][MONTH.format(time)] = {time: new Date(block.time*1000), work: BigInt("0x"+block.chainwork)-work};
-									
-									print();
 								});
 							});
 						}
@@ -313,6 +311,8 @@
 						
 						print();
 					});
+					
+					print();
 				};
 			}
 			
@@ -335,7 +335,9 @@
 				
 				if(timer) clearTimeout(timer);
 			
-				if(chain[localStorage.chain+network])
+				if(localStorage.chain=="total") print();
+				else if(!chain[localStorage.chain+network]) sync();
+				else
 				{
 					document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = true;
 					document.getElementById("table").style = "color:grey";
@@ -363,9 +365,6 @@
 					
 					update(time, work);
 				}
-				else if(localStorage.chain=="total") print();
-				else sync();
-			
 			}
 
 			window.onload = function()
@@ -396,7 +395,11 @@
 						
 						if(option.value == localStorage.chain) refresh();
 					}));
-				})).then(()=>updateAll());
+				})).then(()=>
+				{
+					refresh();
+					updateAll();
+				});
 			}
 			
 			window.onscroll = function()
