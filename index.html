@@ -156,8 +156,7 @@
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + "       ---         ---         ---");
 						else	
-							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") +
-							out.hash.padStart(13, " ") + out.total.padStart(12, " ") + out.work.padStart(12, " "));
+							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + out.hash.padStart(13, " ") + out.total.padStart(12, " ") + out.work.padStart(12, " "));
 						
 					fork.forEach(fork =>
 					{
@@ -269,7 +268,7 @@
 			}
 			
 			function updateAll()
-			{
+			{				
 				if(localStorage.chain=="total")
 				{
 					Promise.all(Array.from(document.getElementById("chain").children).filter(o=>!o.disabled && o.value!="total" && !o.value.match("testnet")).map(ch =>
@@ -284,6 +283,11 @@
 							
 							for(month in table[year]) work += table[year][month].work;
 						}
+						
+						let p = new Date(); p.setUTCDate(0); p.setUTCDate(1);  p.setUTCHours(0);  p.setUTCMinutes(0);  p.setUTCSeconds(0); p.setMilliseconds(0);
+						let d = new Date (0); for(y in chain[ch.value]) if(y!="genesis") for(m in chain[ch.value][y]) if(d<chain[ch.value][y][m].time) d = chain[ch.value][y][m].time;
+						
+						if(ch.value!="bitcoin" && p>d) return;
 						
 						if(ch.value.match("sv"))
 						{
