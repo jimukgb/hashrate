@@ -313,10 +313,8 @@
 						document.getElementById("table").style = "color:black";
 						document.getElementById("network").disabled = document.getElementById("period").disabled = document.getElementById("chain").disabled = false;
 						
-						print();
+						print(window.innerHeight+parseInt(window.scrollY)+3*parseInt(window.getComputedStyle(document.body).fontSize)>=document.getElementById("page").offsetHeight);
 					});
-					
-					print();
 				};
 			}
 			
