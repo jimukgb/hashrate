@@ -148,24 +148,26 @@
 						}
 						else {totalwork[f] = 0n; hashrate [f] = 0n;}
 					});
-					
-					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(4);
-					out.work = " ".repeat(3-Math.log10(out.work)) + out.work;
-					out.work = "  <span>" + out.work.padEnd(7, "#") + "</span> " + prefix(magnitude(sum(chainwork))) + "H";
-				
-					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(3);
-					out.total = " ".repeat(3-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
-					out.total = "  <span>" + out.total.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(totalwork))) + "H";
-					
-					out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
-					out.hash = " ".repeat(3-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
-					out.hash = "   <span>" + out.hash.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + "       ---         ---         ---");
 						else	
+						{
+							out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(4);
+							out.work = " ".repeat(3-Math.log10(out.work)) + out.work;
+							out.work = "  <span>" + out.work.padEnd(7, "#") + "</span> " + prefix(magnitude(sum(chainwork))) + "H";
+						
+							out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(3);
+							out.total = " ".repeat(3-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
+							out.total = "  <span>" + out.total.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(totalwork))) + "H";
+							
+							out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
+							out.hash = " ".repeat(3-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
+							out.hash = "   <span>" + out.hash.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
+							
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + out.hash + out.total + out.work);
+						}
 						
 					fork.forEach(fork =>
 					{
@@ -525,6 +527,7 @@
 	</body>
 
 </html>
+
 
 
 
