@@ -3,7 +3,6 @@
 		<title>Bitcoin Hashrate</title>
 		<link rel="icon" type="image/x-icon" href="bitcoin.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-		<!--<style>span{background-color:lightgray}</style>-->
 		<script>
 			let HOST   = "https://blockchair.com/_api/infinitables/";
 			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/";
@@ -156,15 +155,15 @@
 						{
 							out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(4);
 							out.work = " ".repeat(3-Math.log10(out.work)) + out.work;
-							out.work = "  <span>" + out.work.padEnd(7, "#") + "</span> " + prefix(magnitude(sum(chainwork))) + "H";
+							out.work = "  " + out.work.padEnd(7, "#") + " " + prefix(magnitude(sum(chainwork))) + "H";
 						
 							out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(3);
 							out.total = " ".repeat(3-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
-							out.total = "  <span>" + out.total.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(totalwork))) + "H";
+							out.total = "  " + out.total.padEnd(6, "#") + " " + prefix(magnitude(sum(totalwork))) + "H";
 							
 							out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
 							out.hash = " ".repeat(3-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
-							out.hash = "   <span>" + out.hash.padEnd(6, "#") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
+							out.hash = "   " + out.hash.padEnd(6, "#") + " " + prefix(magnitude(sum(hashrate ))) + "H/s";
 							
 							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + out.hash + out.total + out.work);
 						}
@@ -527,6 +526,7 @@
 	</body>
 
 </html>
+
 
 
 
