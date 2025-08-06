@@ -149,12 +149,12 @@
 					});
 					
 					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(4);
-					out.work = " ".repeat(4-Math.log10(out.work)) + out.work;
-					out.work = out.work.padEnd(9, " ") + prefix(magnitude(sum(chainwork))) + "H";
+					out.work = " ".repeat(5-Math.log10(out.work)) + out.work;
+					out.work = out.work.padEnd(10, " ") + prefix(magnitude(sum(chainwork))) + "H";
 				
 					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(3);
-					out.total = " ".repeat(4-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
-					out.total = out.total.padEnd(8, " ") + prefix(magnitude(sum(totalwork))) + "H";
+					out.total = " ".repeat(5-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
+					out.total = out.total.padEnd(9, " ") + prefix(magnitude(sum(totalwork))) + "H";
 					
 					out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
 					out.hash = " ".repeat(6-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
@@ -524,6 +524,7 @@
 	</body>
 
 </html>
+
 
 
 
