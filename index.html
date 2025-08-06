@@ -3,6 +3,7 @@
 		<title>Bitcoin Hashrate</title>
 		<link rel="icon" type="image/x-icon" href="bitcoin.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<style>span{background-color:lightgray}</style>
 		<script>
 			let HOST   = "https://blockchair.com/_api/infinitables/";
 			let HOSTSV = "https://api.whatsonchain.com/v1/bsv/";
@@ -149,16 +150,16 @@
 					});
 					
 					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(4);
-					out.work = " ".repeat(5-Math.log10(out.work)) + out.work;
-					out.work = out.work.padEnd(10, " ") + prefix(magnitude(sum(chainwork))) + "H";
+					out.work = "   " + " ".repeat(2-Math.log10(out.work)) + out.work;
+					out.work = "<span>" + out.work.padEnd(8, " ") + "</span> " + prefix(magnitude(sum(chainwork))) + "H";
 				
 					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(3);
-					out.total = " ".repeat(5-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
-					out.total = out.total.padEnd(9, " ") + prefix(magnitude(sum(totalwork))) + "H";
+					out.total = "  " + " ".repeat(5-Math.log10(out.total)) + out.total + (out.total>=100?".":"");
+					out.total = "<span>" + out.total.padEnd(7, " ") + "</span> " + prefix(magnitude(sum(totalwork))) + "H";
 					
 					out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
-					out.hash = " ".repeat(6-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
-					out.hash = out.hash.padEnd(10, " ") + prefix(magnitude(sum(hashrate ))) + "H/s";
+					out.hash = "  " + " ".repeat(6-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
+					out.hash = "<span>" + out.hash.padEnd(8, " ") + "</span>" + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
@@ -524,6 +525,7 @@
 	</body>
 
 </html>
+
 
 
 
