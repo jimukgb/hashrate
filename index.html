@@ -148,9 +148,9 @@
 						else {totalwork[f] = 0n; hashrate [f] = 0n;}
 					});
 					
-					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(3); out.work  += " ".repeat(Math.ceil(Math.log10(out.work) +1)) + prefix(magnitude(sum(chainwork))) + "H";
-					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(4); out.total += " ".repeat(Math.ceil(Math.log10(out.total)+1)) + prefix(magnitude(sum(totalwork))) + "H";
-					out.hash  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3); out.hash  += " ".repeat(Math.ceil(Math.log10(out.hash) +1)) + prefix(magnitude(sum(hashrate ))) + "H/s";
+					out.work  = (parseFloat(sum(chainwork))/1000**magnitude(sum(chainwork))).toPrecision(3); out.work  += (out.work>=100?".":"") + " ".repeat(Math.ceil(Math.log10(out.work))) + prefix(magnitude(sum(chainwork))) + "H";
+					out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toPrecision(4); out.total += (out.total>=100?".":"")+ " ".repeat(Math.ceil(Math.log10(out.total)))+ prefix(magnitude(sum(totalwork))) + "H";
+					out.hash  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3); out.hash  += (out.hash>=100?".":"") + " ".repeat(Math.ceil(Math.log10(out.hash))) + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
@@ -516,6 +516,7 @@
 	</body>
 
 </html>
+
 
 
 
