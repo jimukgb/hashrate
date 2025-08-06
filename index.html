@@ -159,7 +159,7 @@
 					
 					out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
 					out.hash = " ".repeat(3-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
-					out.hash = "  <span>" + out.hash.padEnd(6, " ") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
+					out.hash = "   <span>" + out.hash.padEnd(6, " ") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
 						if(localStorage.chain!="total"?(!chain[fork][YEAR.format(date)] || !chain[fork][YEAR.format(date)][MONTH.format(date)]):min(count))
@@ -525,6 +525,7 @@
 	</body>
 
 </html>
+
 
 
 
