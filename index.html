@@ -158,7 +158,7 @@
 					out.total = "  <span>" + out.total.padEnd(7, " ") + "</span> " + prefix(magnitude(sum(totalwork))) + "H";
 					
 					out.hash = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toPrecision(3);
-					out.hash = " ".repeat(6-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
+					out.hash = " ".repeat(3-Math.log10(out.hash)) + out.hash + (out.hash>=100?".":"");
 					out.hash = "  <span>" + out.hash.padEnd(8, " ") + "</span> " + prefix(magnitude(sum(hashrate ))) + "H/s";
 						
 					if(period=="month" || period=="year" && (date.getUTCMonth()+1==12 || API.format(date)==API.format(new Date())))
@@ -525,6 +525,7 @@
 	</body>
 
 </html>
+
 
 
 
