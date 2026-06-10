@@ -157,7 +157,7 @@
 							out.total = (parseFloat(sum(totalwork))/1000**magnitude(sum(totalwork))).toFixed(3) + " " + prefix(magnitude(sum(totalwork))) + "H";
 							out.hash  = (parseFloat(sum(hashrate ))/1000**magnitude(sum(hashrate ))).toFixed(2) + " " + prefix(magnitude(sum(hashrate ))) + "H/s";
 							
-							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + out.hash + out.total + out.work);
+							output.push("[" + (period=="month"?PRINT.format(date)+"]":YEAR.format(date)+ "]    ") + out.hash.padStart(13, " ") + out.total.padStart(12, " ") + out.work.padStart(12, " "));
 						}
 						
 					fork.forEach(fork =>
