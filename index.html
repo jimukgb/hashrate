@@ -178,6 +178,8 @@
 						output = [];
 					}
 				}
+
+				if(period=="month") for(let i=0; i<6; i++) document.getElementById("table").innerHTML += "<div class='blank'>-----------------------------------------------</div>";
 				
 				if(scroll)
 					window.scrollBy({top: document.body.scrollHeight, behavior: "smooth"});
@@ -477,6 +479,12 @@
 			#table > div
 			{
 				margin: 10px;
+			}
+
+			.blank
+			{
+				height: 0;
+				overflow: hidden;
 			}
 			
 			@media only screen and (max-width: 768px)
